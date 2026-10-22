@@ -29,7 +29,9 @@ import org.springframework.core.ResolvableType;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.codec.AbstractJacksonEncoder;
+import org.springframework.http.converter.json.ProblemDetailJacksonXmlMixin;
 import org.springframework.util.MimeType;
 
 /**
@@ -53,20 +55,22 @@ public class JacksonXmlEncoder extends AbstractJacksonEncoder<XmlMapper> {
 	/**
 	 * Construct a new instance with a {@link XmlMapper} customized with the
 	 * {@link tools.jackson.databind.JacksonModule}s found by
-	 * {@link MapperBuilder#findModules(ClassLoader)}.
+	 * {@link MapperBuilder#findModules(ClassLoader)} and
+	 * {@link ProblemDetailJacksonXmlMixin}.
 	 */
 	public JacksonXmlEncoder() {
-		super(XmlMapper.builder(), DEFAULT_XML_MIME_TYPES);
+		this(XmlMapper.builder(), DEFAULT_XML_MIME_TYPES);
 	}
 
 	/**
 	 * Construct a new instance with the provided {@link XmlMapper.Builder}
 	 * customized with the {@link tools.jackson.databind.JacksonModule}s
-	 * found by {@link MapperBuilder#findModules(ClassLoader)}.
+	 * found by {@link MapperBuilder#findModules(ClassLoader)} and
+	 * {@link ProblemDetailJacksonXmlMixin}.
 	 * @see XmlMapper#builder()
 	 */
 	public JacksonXmlEncoder(XmlMapper.Builder builder) {
-		super(builder, DEFAULT_XML_MIME_TYPES);
+		this(builder, DEFAULT_XML_MIME_TYPES);
 	}
 
 	/**
@@ -80,12 +84,12 @@ public class JacksonXmlEncoder extends AbstractJacksonEncoder<XmlMapper> {
 	/**
 	 * Construct a new instance with the provided {@link XmlMapper.Builder}
 	 * customized with the {@link tools.jackson.databind.JacksonModule}s
-	 * found by {@link MapperBuilder#findModules(ClassLoader)}, and
-	 * {@link MimeType}s.
+	 * found by {@link MapperBuilder#findModules(ClassLoader)} and
+	 * {@link ProblemDetailJacksonXmlMixin}, and {@link MimeType}s.
 	 * @see XmlMapper#builder()
 	 */
 	public JacksonXmlEncoder(XmlMapper.Builder builder, MimeType... mimeTypes) {
-		super(builder, mimeTypes);
+		super(builder.addMixIn(ProblemDetail.class, ProblemDetailJacksonXmlMixin.class), mimeTypes);
 	}
 
 	/**

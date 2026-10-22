@@ -16,6 +16,7 @@
 
 package org.springframework.http.codec.xml;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
@@ -28,6 +29,7 @@ import org.springframework.core.ResolvableType;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.testfixture.codec.AbstractDecoderTests;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.web.testfixture.xml.Pojo;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -101,6 +103,28 @@ class JacksonXmlDecoderTests extends AbstractDecoderTests<JacksonXmlDecoder> {
 				.expectNext(expected)
 				.expectComplete()
 				.verify(), null, null);
+	}
+
+	@Test  // gh-37503
+	void decodeProblemDetailWithProperties() {
+		String xml = """
+				<problem xmlns="urn:ietf:rfc:7807">
+					<type>https://example.com/problems/order-not-found</type>
+					<title>Order Not Found</title>
+					<status>404</status>
+					<detail>Order 42 does not exist</detail>
+					<instance>/orders/42</instance>
+					<errorCode>ORDER_NOT_FOUND</errorCode>
+				</problem>""";
+		Flux<DataBuffer> input = Flux.from(dataBuffer(xml.getBytes(StandardCharsets.UTF_8)));
+
+		testDecodeToMono(input, ProblemDetail.class, step -> step
+				.consumeNextWith(problemDetail -> {
+					assertThat(problemDetail.getStatus()).isEqualTo(404);
+					assertThat(problemDetail.getDetail()).isEqualTo("Order 42 does not exist");
+					assertThat(problemDetail.getProperties()).containsEntry("errorCode", "ORDER_NOT_FOUND");
+				})
+				.verifyComplete());
 	}
 
 }
