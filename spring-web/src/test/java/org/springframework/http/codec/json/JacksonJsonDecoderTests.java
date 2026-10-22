@@ -42,6 +42,7 @@ import org.springframework.core.codec.DecodingException;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.testfixture.codec.AbstractDecoderTests;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.codec.json.JacksonViewBean.MyJacksonView1;
 import org.springframework.http.codec.json.JacksonViewBean.MyJacksonView3;
 import org.springframework.util.MimeType;
@@ -167,6 +168,28 @@ class JacksonJsonDecoderTests extends AbstractDecoderTests<JacksonJsonDecoder> {
 				.expectNext(Arrays.asList(new Pojo("f1", "b1"), new Pojo("f2", "b2")))
 				.expectComplete()
 				.verify(), null, null);
+	}
+
+	@Test  // gh-37503
+	void decodeProblemDetailWithProperties() {
+		JacksonJsonDecoder decoder = new JacksonJsonDecoder();
+		Flux<DataBuffer> input = Flux.from(stringBuffer(
+				"{\"type\":\"https://example.com/problems/order-not-found\",\"title\":\"Order Not Found\"," +
+				"\"status\":404,\"detail\":\"Order 42 does not exist\",\"instance\":\"/orders/42\"," +
+				"\"errorCode\":\"ORDER_NOT_FOUND\",\"orderId\":42}"));
+
+		Mono<Object> result = decoder.decodeToMono(input, ResolvableType.forClass(ProblemDetail.class), null, null);
+
+		StepVerifier.create(result)
+				.consumeNextWith(value -> {
+					ProblemDetail problemDetail = (ProblemDetail) value;
+					assertThat(problemDetail.getStatus()).isEqualTo(404);
+					assertThat(problemDetail.getDetail()).isEqualTo("Order 42 does not exist");
+					assertThat(problemDetail.getProperties())
+							.containsEntry("errorCode", "ORDER_NOT_FOUND")
+							.containsEntry("orderId", 42);
+				})
+				.verifyComplete();
 	}
 
 	@Test
